@@ -37,6 +37,13 @@ st.markdown(
             padding: 20px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
+
+        section {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
     </style>
     """,
     unsafe_allow_html=True
@@ -66,6 +73,30 @@ def load_model(model_path: str = "xgb_model_price.pkl"):
 model = load_model()
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Cargar el CSV de ciudades y vecindarios
+# ──────────────────────────────────────────────────────────────────────────────
+
+@st.cache_data
+def load_ubicaciones(path="df_limpio.csv"):
+    df = pd.read_csv(path, encoding="latin-1", on_bad_lines="skip")
+    df = df.rename(columns={"neighbourhood": "neighborhood"})  # por si acaso
+    return df[["city", "neighborhood"]].dropna().drop_duplicates()
+
+df_ubicaciones = load_ubicaciones()
+
+
+# ─────── Selector dinámico CIUDAD y VECINDARIO (fuera del form) ───────
+st.markdown("## 🗺️ Formulario")
+
+col_city, col_neigh = st.columns(2)
+with col_city:
+    city = st.selectbox("Ciudad", sorted(df_ubicaciones["city"].dropna().unique()))
+with col_neigh:
+    neighborhoods = df_ubicaciones[df_ubicaciones["city"] == city]["neighborhood"].dropna().unique()
+    neighborhood = st.selectbox("Vecindario", sorted(neighborhoods))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Formulario - Entrada de datos
 # ──────────────────────────────────────────────────────────────────────────────
 with st.form("prediction_form"):
@@ -74,8 +105,7 @@ with st.form("prediction_form"):
     with col1:
         lat = st.number_input("Latitud", value=-34.60, format="%.6f")
         province = st.selectbox("Provincia", ["Bs.As. G.B.A. Zona Norte", "Bs.As. G.B.A. Zona Sur", "Bs.As. G.B.A. Zona Oeste", "Capital Federal"])
-        city = st.selectbox("Ciudad", ["Parque Chacabuco", "Tigre", "Morón", "Quilmes", "San Isidro", "Villa Luro"])
-        neighborhood = st.selectbox("Vecindario", ["Palermo Chico", "Valentín Alsina"])
+
         properaty_type = st.selectbox("Tipo de Propiedad", ["Casa", "Departamento", "Oficina", "PH"])
         rooms = st.number_input("Ambientes (rooms)", min_value=0.0, value=3.0, step=1.0)
 
@@ -135,7 +165,6 @@ if submitted:
         "Oficina": 2,
         "PH": 3
     }
-    #input_data["properaty_type_encoded"] = input_data["properaty_type"].map(property_map)
 
     # ─────── Combinar y seleccionar columnas finales ───────
     input_data_final = pd.concat([
