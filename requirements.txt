@@ -1,4 +1,8 @@
+streamlit
+xgboost
 scikit-learn
+pandas
+numpy
 plotly
 pillow
 opencv-python
